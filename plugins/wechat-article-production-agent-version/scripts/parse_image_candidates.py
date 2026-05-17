@@ -63,9 +63,22 @@ def parse_sources(value):
     return [clean_text(item) for item in re.split(r"[,，;；]", value) if clean_text(item)]
 
 
+def format_line_error(source, line_number, line, reason):
+    return (
+        f"{source}:{line_number} 不是 key: value 单行字段。\n"
+        f"原因：{reason}\n"
+        "当前解析器要求每个字段写成一行，例如：\n"
+        "attempted_sources: Wikimedia Commons, NASA\n"
+        "notes: 找不到更贴近主题的可靠封面，使用公开授权馆藏图作为封面。\n"
+        "不要写成 Markdown 列表、字段值换行或多行说明。\n"
+        f"当前行：{line}"
+    )
+
+
 def parse_blocks(text, source):
     blocks = []
     current = None
+    last_key = None
     for line_number, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
         if not line:
@@ -75,16 +88,31 @@ def parse_blocks(text, source):
                 if current is not None:
                     blocks.append(current)
                 current = {"_heading": clean_text(line[3:]), "_line": line_number}
+                last_key = None
             continue
         if current is None:
             die(f"{source}:{line_number} field appears before a ## image block.")
         if ":" not in line and "：" not in line:
-            die(f"{source}:{line_number} field must use key: value syntax.")
+            if line.startswith(("- ", "* ")):
+                reason = "检测到 Markdown 列表项；attempted_sources 必须写成单行逗号分隔。"
+            elif last_key:
+                reason = f"上一字段 {last_key} 后面出现了续写行；字段值不允许换行。"
+            else:
+                reason = "缺少字段名和冒号。"
+            die(format_line_error(source, line_number, line, reason))
         key, value = re.split(r"[:：]", line, maxsplit=1)
         key = clean_text(key)
         if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
-            die(f"{source}:{line_number} invalid field name: {key}")
+            die(
+                format_line_error(
+                    source,
+                    line_number,
+                    line,
+                    f"字段名只能使用英文字母、数字和下划线，当前字段名是 {key}。",
+                )
+            )
         current[key] = clean_text(value)
+        last_key = key
     if current is not None:
         blocks.append(current)
     if not blocks:
@@ -144,6 +172,35 @@ def normalize_block(block, article_dir):
     }
 
 
+def validate_cover_contract(manifest, article_dir):
+    covers = [image for image in manifest if clean_text(image.get("placement")) == "cover"]
+    if not covers:
+        die(
+            "image_candidates.md 缺少封面块。每篇文章必须有且只有一个 placement: cover 的图片，"
+            "它同时用于 HTML 正文开头封面和微信 API thumb_media_id。"
+        )
+    if len(covers) > 1:
+        ids = ", ".join(clean_text(image.get("id")) or "<missing id>" for image in covers)
+        die(f"image_candidates.md 只能有一个 placement: cover 的封面块，当前找到 {len(covers)} 个：{ids}")
+
+    cover = covers[0]
+    label = clean_text(cover.get("id")) or "cover"
+    if clean_text(cover.get("type")) != "cover":
+        die(f"{label} 是 placement: cover，但 type 必须是 cover。")
+    if cover.get("license_status") == "not_found":
+        die(f"{label} 是封面图，不能使用 license_status: not_found；封面必须有可上传的本地图片。")
+    local_path = cover.get("local_path")
+    if not local_path:
+        die(f"{label} 是封面图，local_path 不能是 null。")
+    if cover.get("access_status") != "downloaded":
+        die(f"{label} 是封面图，access_status 必须是 downloaded。")
+    path = Path(local_path)
+    if not path.is_absolute():
+        path = article_dir / path
+    if not path.exists():
+        die(f"{label} 封面图 local_path 指向的文件不存在：{local_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Parse image_candidates.md into image_manifest.json.")
     parser.add_argument("--article-dir", required=True)
@@ -158,6 +215,7 @@ def main():
 
     blocks = parse_blocks(candidates_path.read_text("utf-8"), candidates_path)
     manifest = [normalize_block(block, article_dir) for block in blocks]
+    validate_cover_contract(manifest, article_dir)
     manifest_path = article_dir / args.manifest
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", "utf-8")
     print(json.dumps({"image_manifest": str(manifest_path), "images": len(manifest)}, ensure_ascii=False))

@@ -12,6 +12,8 @@ The workflow is now showrunner-first: the main agent coordinates the user, creat
 
 Agents do not hand-write final `article.json` or `image_manifest.json`. Those files are script products.
 
+Subagents do not call this plugin again. They follow the main agent's task packet and deliver only `article_draft.md`, `image_candidates.md`, and local images.
+
 ## Default Flow
 
 ```text
@@ -47,6 +49,8 @@ Use `--upload` only after the user requests upload and WeChat credentials are av
 自然段正文。
 ```
 
+The `摘要：...` line is canonical. The same summary is rendered at the top of `article.html` and sent to WeChat as the draft `digest`.
+
 `image_candidates.md` must contain one `##` block per image item with:
 
 ```text
@@ -65,7 +69,24 @@ attempted_sources
 notes
 ```
 
-When no reliable image is found, keep a block with `license_status: not_found` and `local_path: null`.
+Every article must contain exactly one canonical cover block with `type: cover`, `placement: cover`, and a non-null `local_path` pointing to an existing local image. That same cover is rendered at the top of the HTML body and uploaded to WeChat as the draft cover/`thumb_media_id`.
+
+When no reliable body image is found, keep a block with `license_status: not_found` and `local_path: null`. The cover image cannot use `not_found`.
+
+Every image field must be written as one `key: value` line. Do not use Markdown lists or multi-line field values. Write sources like:
+
+```text
+attempted_sources: Wikimedia Commons, NASA, The Met
+notes: 找不到更贴近主题的可靠封面，使用公开授权馆藏图作为封面。
+```
+
+Do not write:
+
+```text
+attempted_sources:
+- Wikimedia Commons
+- NASA
+```
 
 ## Image Strategy
 
@@ -77,7 +98,7 @@ The image workflow prioritizes truthfulness, license transparency, local downloa
 - AI-generated images are off by default, allowed only when explicitly requested, and must be marked `ai_generated`.
 - Evidence images must never use `stock_license` or `ai_generated`.
 
-Finding no reliable image is acceptable. The manifest records a `not_found` placeholder instead of invented metadata.
+Finding no reliable body image is acceptable. The manifest records a `not_found` placeholder instead of invented metadata. Finding no reliable cover must stop the package before upload.
 
 ## Included Scripts
 

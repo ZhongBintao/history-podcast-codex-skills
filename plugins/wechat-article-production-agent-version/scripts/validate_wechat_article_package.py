@@ -105,6 +105,7 @@ def validate_manifest(manifest, manifest_path, article_dir, errors):
     if not isinstance(manifest, list):
         fail(errors, f"{manifest_path} must be a JSON array.")
         return
+    cover_indexes = []
     for index, image in enumerate(manifest):
         label = f"image_manifest[{index}]"
         if not isinstance(image, dict):
@@ -130,6 +131,14 @@ def validate_manifest(manifest, manifest_path, article_dir, errors):
             fail(errors, f"{label} attempted_sources must be an array.")
         if role == "evidence" and license_status in {"stock_license", "ai_generated"}:
             fail(errors, f"{label} evidence image cannot use {license_status}.")
+        if image.get("placement") == "cover":
+            cover_indexes.append(index)
+            if image.get("type") != "cover":
+                fail(errors, f"{label} cover placement must use type: cover.")
+            if license_status == "not_found":
+                fail(errors, f"{label} cover image cannot use license_status: not_found.")
+            if access_status != "downloaded":
+                fail(errors, f"{label} cover image must use access_status: downloaded.")
 
         local_path = image.get("local_path")
         if access_status == "downloaded":
@@ -141,6 +150,13 @@ def validate_manifest(manifest, manifest_path, article_dir, errors):
                     path = article_dir / path
                 if not path.exists():
                     fail(errors, f"{label} local_path does not exist: {local_path}")
+        if image.get("placement") == "cover" and not local_path:
+            fail(errors, f"{label} cover image local_path must not be null.")
+
+    if not cover_indexes:
+        fail(errors, "image_manifest.json must contain exactly one cover image with placement: cover.")
+    elif len(cover_indexes) > 1:
+        fail(errors, f"image_manifest.json must contain exactly one cover image; found {len(cover_indexes)}.")
 
 
 def validate_html(html_path, article_dir, errors):

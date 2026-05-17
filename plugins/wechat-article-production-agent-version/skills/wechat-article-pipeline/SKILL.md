@@ -61,6 +61,8 @@ images/
 
 The subagent must not upload to WeChat, read AppSecret, write global state, update `batch_state.json`, delete shared files, or directly create final JSON files.
 
+The subagent must not invoke `wechat-article-pipeline` again. It follows the task packet from the main agent and delivers only Markdown contract files plus local images.
+
 ## Article Markdown Contract
 
 `article_draft.md` must use this shape:
@@ -80,6 +82,7 @@ Rules:
 - Use exactly one `#` title.
 - Use one `摘要：...` line.
 - Keep summary at or below 110 characters.
+- The summary is canonical: it is rendered again at the top of the HTML body and is also sent to the WeChat API as `digest`.
 - Use one or more `##` sections.
 - Section bodies are natural paragraphs, not bullet lists.
 - Do not include title options, writing notes, source lists, internal comments, or JSON.
@@ -95,13 +98,14 @@ python3 scripts/parse_article_draft.py --article-dir /absolute/path/to/article-d
 
 ## Image Markdown Contract
 
-`image_candidates.md` contains one `##` block per image need or final image. Every block must include these fields:
+`image_candidates.md` contains one `##` block per image need or final image. Every block must include these fields, one field per line:
 
 ```markdown
 ## img-001
 id: img-001
+type: cover
 role: evidence
-placement: before_section:小标题
+placement: cover
 visual_need: 需要什么画面或图表
 source_page_url: https://...
 image_url: https://...
@@ -114,6 +118,15 @@ attempted_sources: Wikimedia Commons, NASA
 notes: 用于说明...
 ```
 
+Every article must contain exactly one canonical cover block:
+
+- `type: cover`
+- `placement: cover`
+- `local_path` must point to an existing local image file
+- `license_status` must not be `not_found`
+
+The cover is canonical: the same local image is rendered at the top of the HTML body and uploaded to WeChat as the draft cover/`thumb_media_id`.
+
 When no reliable image is found, still write the block:
 
 ```markdown
@@ -121,6 +134,30 @@ license_status: not_found
 local_path: null
 source_page_url: null
 image_url: null
+```
+
+This not-found placeholder is allowed for body images only. The cover image cannot be `not_found`.
+
+The Markdown contract is intentionally strict:
+
+- Every field value must fit on the same line as `key: value`.
+- Do not use Markdown bullet lists.
+- Do not continue `notes` or any other field on the next line.
+- `attempted_sources` must be a comma-separated single line or a JSON array string.
+
+Correct:
+
+```text
+attempted_sources: Wikimedia Commons, NASA, The Met
+notes: 找不到更贴近主题的可靠封面，使用公开授权馆藏图作为封面。
+```
+
+Wrong:
+
+```text
+attempted_sources:
+- Wikimedia Commons
+- NASA
 ```
 
 Allowed roles are `evidence`, `explanation`, `spatial_orientation`, `pacing`, and `atmosphere`.
@@ -146,7 +183,7 @@ Use sources in this priority order:
 
 For each image need, try at most three high-quality candidate sources and the same URL at most once. If a source is blocked, times out, has unclear rights, or lacks a reliable image, move on. If no reliable image remains, write `license_status: not_found`.
 
-Finding no reliable image is acceptable. Faking source metadata is a workflow failure.
+Finding no reliable body image is acceptable. Faking source metadata is a workflow failure. Finding no cover means the package must fail before upload instead of using an unrelated substitute.
 
 ## Main Script
 
