@@ -1,4 +1,4 @@
-# WeChat Article Production Agent Version (Codex 版本)
+# WeChat Article Production Agent Version (Claude Code 版本)
 
 `wechat-article-production-agent-version` converts completed Chinese podcast narration into WeChat Official Account article drafts.
 
@@ -8,11 +8,9 @@ The only user-facing skill is:
 wechat-article-pipeline
 ```
 
-The workflow is now showrunner-first: the main agent coordinates the user, creates one directory per article, assigns one subagent per article, accepts only fixed Markdown contract files, and delegates final JSON generation, validation, rendering, and optional upload to deterministic scripts.
+The workflow is agent-first: you coordinate with the user, create one directory per article, write fixed Markdown contract files (article_draft.md + image_candidates.md), download local images, and delegate final JSON generation, validation, rendering, and optional upload to deterministic scripts.
 
-Agents do not hand-write final `article.json` or `image_manifest.json`. Those files are script products.
-
-Subagents do not call this plugin again. They follow the main agent's task packet and deliver only `article_draft.md`, `image_candidates.md`, and local images.
+Do not hand-write final `article.json` or `image_manifest.json`. Those files are script products.
 
 ## Default Flow
 
@@ -26,7 +24,7 @@ narration.txt
 → render_wechat_html.py
 → validate_wechat_article_package.py --require-html
 → .wechat-work/preflight.json
-→ optional WeChat draft upload by main agent only
+→ optional WeChat draft upload when credentials are ready
 ```
 
 The main command is:
@@ -49,8 +47,6 @@ Use `--upload` only after the user requests upload and WeChat credentials are av
 自然段正文。
 ```
 
-The `摘要：...` line is canonical. The same summary is rendered at the top of `article.html` and sent to WeChat as the draft `digest`.
-
 `image_candidates.md` must contain one `##` block per image item with:
 
 ```text
@@ -69,24 +65,7 @@ attempted_sources
 notes
 ```
 
-Every article must contain exactly one canonical cover block with `type: cover`, `placement: cover`, and a non-null `local_path` pointing to an existing local image. That same cover is rendered at the top of the HTML body and uploaded to WeChat as the draft cover/`thumb_media_id`.
-
-When no reliable body image is found, keep a block with `license_status: not_found` and `local_path: null`. The cover image cannot use `not_found`.
-
-Every image field must be written as one `key: value` line. Do not use Markdown lists or multi-line field values. Write sources like:
-
-```text
-attempted_sources: Wikimedia Commons, NASA, The Met
-notes: 找不到更贴近主题的可靠封面，使用公开授权馆藏图作为封面。
-```
-
-Do not write:
-
-```text
-attempted_sources:
-- Wikimedia Commons
-- NASA
-```
+When no reliable image is found, keep a block with `license_status: not_found` and `local_path: null`.
 
 ## Image Strategy
 
@@ -98,7 +77,7 @@ The image workflow prioritizes truthfulness, license transparency, local downloa
 - AI-generated images are off by default, allowed only when explicitly requested, and must be marked `ai_generated`.
 - Evidence images must never use `stock_license` or `ai_generated`.
 
-Finding no reliable body image is acceptable. The manifest records a `not_found` placeholder instead of invented metadata. Finding no reliable cover must stop the package before upload.
+Finding no reliable image is acceptable. The manifest records a `not_found` placeholder instead of invented metadata.
 
 ## Included Scripts
 
@@ -111,7 +90,7 @@ python3 scripts/run_wechat_article_package.py --article-dir /absolute/path/to/ar
 python3 scripts/upload_wechat_draft.py --article-dir /absolute/path/to/article-dir
 ```
 
-`run_wechat_article_package.py` is the normal production entrypoint for the main agent. It writes `.wechat-work/preflight.json` after the package validates and renders.
+`run_wechat_article_package.py` is the normal production entrypoint. It writes `.wechat-work/preflight.json` after the package validates and renders.
 
 Standalone render/upload commands refuse to continue when Markdown, generated JSON, or manifest files are newer than preflight. Rerun the main package script after edits.
 
@@ -120,7 +99,7 @@ Standalone render/upload commands refuse to continue when Markdown, generated JS
 Credentials are read from environment variables first, then from:
 
 ```text
-~/.codex/wechat.env
+~/.claude/wechat.env
 ```
 
 Required:

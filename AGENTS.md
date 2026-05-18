@@ -1,15 +1,20 @@
 # History Podcast Codex Plugins 交接文档
 
-更新时间：2026-05-15
+更新时间：2026-05-18
 
 ## 仓库定位
 
-本仓库是一个双插件 Codex 仓库：
+本仓库包含四组插件：
 
-- `plugins/podcast-production/`：中文知识播客生产插件。
-- `plugins/wechat-article-production/`：播客口播稿转微信公众号草稿插件。
+- `plugins/podcast-production/`：中文知识播客生产插件（原始版本）。
+- `plugins/wechat-article-production/`：播客口播稿转微信公众号草稿插件（原始版本）。
+- `plugins/podcast-production-agent-version/`：**Codex 版本** — 播客生产 subagent 编排工作流。
+- `plugins/wechat-article-production-agent-version/`：**Codex 版本** — 微信文章 showrunner + subagent 编排工作流。
+- `plugins/podcast-production-agent-version-claude/`：**Claude Code 版本** — 单 agent 播客生产工作流。
+- `plugins/wechat-article-production-agent-version-claude/`：**Claude Code 版本** — 单 agent 微信文章生产工作流。
 
-Codex 插件入口由 `.agents/plugins/marketplace.json` 声明。每个插件都有自己的 `.codex-plugin/plugin.json`，并通过 `skills: "./skills/"` 暴露插件内 skills。
+Codex 版本使用 `.codex-plugin/plugin.json` + `agents/openai.yaml` 插件格式，依赖 Codex 的 subagent 编排能力。
+Claude Code 版本使用 `.claude-plugin/plugin.json` 格式，将 subagent 工作流改写为单 agent 直接执行，并移除了 `agents/openai.yaml`。
 
 ## 播客插件
 
@@ -151,3 +156,38 @@ python3 -m py_compile scripts/*.py skills/podcast-tts-producer/scripts/*.py skil
 cd plugins/wechat-article-production
 python3 -m py_compile skills/wechat-html-publisher/scripts/*.py
 ```
+
+## Agent 版本插件（Codex 版 vs Claude Code 版）
+
+本仓库从 2026-05 起同时提供 Codex 和 Claude Code 两套 agent-version 插件。
+
+### 播客生产 Agent 版本
+
+| | Codex 版本 | Claude Code 版本 |
+|---|---|---|
+| 路径 | `plugins/podcast-production-agent-version/` | `plugins/podcast-production-agent-version-claude/` |
+| 插件格式 | `.codex-plugin/plugin.json` | `.claude-plugin/plugin.json` |
+| Agent 配置 | `agents/openai.yaml` | 无（SKILL.md frontmatter 直接驱动） |
+| 工作流 | main agent + subagent 编排 | 单 agent 直接执行 |
+| 入口 skill | `podcast-series-showrunner` | `podcast-series-showrunner` |
+| 凭证读取 | `~/.codex/wechat.env` | `~/.claude/wechat.env` |
+
+### 微信文章 Agent 版本
+
+| | Codex 版本 | Claude Code 版本 |
+|---|---|---|
+| 路径 | `plugins/wechat-article-production-agent-version/` | `plugins/wechat-article-production-agent-version-claude/` |
+| 插件格式 | `.codex-plugin/plugin.json` | `.claude-plugin/plugin.json` |
+| Agent 配置 | `agents/openai.yaml` | 无（SKILL.md frontmatter 直接驱动） |
+| 工作流 | main agent + subagent 编排 | 单 agent 直接执行 |
+| 入口 skill | `wechat-article-pipeline` | `wechat-article-pipeline` |
+| 凭证读取 | `~/.codex/wechat.env` | `~/.claude/wechat.env` |
+
+### 版本差异总结
+
+两套版本的 Python 脚本完全相同。差异仅在插件元数据和 SKILL.md：
+
+- **Codex 版**：SKILL.md 描述 main agent / subagent 分工与 task packet 模板，依赖 Codex 的 subagent 能力。
+- **Claude Code 版**：SKILL.md 移除 subagent 术语，改为 "you" 单 agent 叙述，所有步骤由同一个 agent 执行。
+
+新增功能时，两套版本的脚本应保持同步。SKILL.md 按各自平台的 agent 模式维护。

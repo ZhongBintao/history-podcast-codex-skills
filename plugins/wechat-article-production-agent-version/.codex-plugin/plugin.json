@@ -1,7 +1,7 @@
 {
   "name": "wechat-article-production-agent-version",
   "version": "0.1.0",
-  "description": "Showrunner-first Codex plugin for turning completed Chinese podcast narration into WeChat Official Account article drafts through subagents, Markdown contracts, deterministic validation, and optional upload.",
+  "description": "[Codex 版本] Showrunner-first Codex plugin for turning completed Chinese podcast narration into WeChat Official Account article drafts through subagents, Markdown contracts, deterministic validation, and optional upload.",
   "author": {
     "name": "ZhongBintao",
     "url": "https://github.com/ZhongBintao"

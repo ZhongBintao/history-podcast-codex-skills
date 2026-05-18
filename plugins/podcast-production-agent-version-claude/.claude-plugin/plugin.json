@@ -1,0 +1,12 @@
+{
+  "name": "podcast-production-agent-version",
+  "version": "0.1.0",
+  "description": "[Claude Code 版本] 中文知识播客系列策划与单集音频生产。唯一入口 podcast-series-showrunner，确认系列方案后按 episode 生产 narration.txt、TTS 音频和 voice-only episode.mp3。",
+  "author": {
+    "name": "ZhongBintao",
+    "url": "https://github.com/ZhongBintao"
+  },
+  "homepage": "https://github.com/ZhongBintao/podcast-skills",
+  "repository": "https://github.com/ZhongBintao/podcast-skills",
+  "keywords": ["podcast", "tts", "播客", "audio-production"]
+}

@@ -1,7 +1,7 @@
 {
   "name": "podcast-production-agent-version",
   "version": "0.1.0",
-  "description": "Subagent-first Codex plugin for Chinese knowledge podcast series planning and per-episode voice-only audio production.",
+  "description": "[Codex 版本] Subagent-first Codex plugin for Chinese knowledge podcast series planning and per-episode voice-only audio production.",
   "author": {
     "name": "ZhongBintao",
     "url": "https://github.com/ZhongBintao"

@@ -1,0 +1,12 @@
+{
+  "name": "wechat-article-production-agent-version",
+  "version": "0.1.0",
+  "description": "[Claude Code 版本] 把 narration.txt 口播稿转成微信公众号草稿。通过 article_draft.md + image_candidates.md Markdown 契约交付，脚本确定性解析 JSON、校验、渲染并可选上传。",
+  "author": {
+    "name": "ZhongBintao",
+    "url": "https://github.com/ZhongBintao"
+  },
+  "homepage": "https://github.com/ZhongBintao/podcast-skills",
+  "repository": "https://github.com/ZhongBintao/podcast-skills",
+  "keywords": ["wechat", "article", "podcast", "image-sourcing"]
+}

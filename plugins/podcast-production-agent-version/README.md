@@ -1,4 +1,4 @@
-# Podcast Production Agent Version
+# Podcast Production Agent Version (Codex 版本)
 
 `podcast-production-agent-version` is a subagent-first workflow for producing Chinese knowledge podcast series across history, science, humanities, travel, business, culture, and custom topics.
 
